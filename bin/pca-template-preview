@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+
+import pca_report.template_preview.generate_template_preview as generate_template_preview
+generate_template_preview.main()

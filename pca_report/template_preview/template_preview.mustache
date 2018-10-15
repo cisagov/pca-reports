@@ -1,0 +1,258 @@
+{{=<< >>=}}
+\documentclass[twoside]{article}
+
+% xetex
+\usepackage{geometry} % full page
+\usepackage{fontspec} % provides font selecting commands
+% \usepackage[font=sf]{caption} % change caption font to sans
+% \usepackage{titlesec} % control section title fonts
+% \usepackage{rotating} % provides text rotation
+\usepackage{color} % provides background colorbox
+\usepackage{layout} % display page dimensions
+\usepackage{datetime} % format dates
+% \usepackage[titletoc,toc,title]{appendix}
+% \usepackage{booktabs} % nice book tables
+\usepackage[cmyk,table]{xcolor} % add color to tables and page background
+% \usepackage{todonotes} % development notes
+% \usepackage{float} % the H float placement
+\usepackage{longtable} % allows tables to span multiple pages
+\usepackage{pdflscape} % rotation of pdf paper
+\usepackage{multicol} % allows switching column formats without ejecting a page
+% \usepackage{dashrule} % draw variety of dashed rules
+% \usepackage[autolanguage]{numprint} % prints numbers with a separator every three digits
+% \usepackage[rel]{overpic} % typeset over images
+% \usepackage[shortcuts]{extdash} % allow hyphenation of hyphenated words look for \-/
+% \usepackage{textcomp} % for TM symbol
+\usepackage{setspace} % control spacing between lines
+\usepackage{ragged2e}
+% \usepackage{enumitem}
+\usepackage[none]{hyphenat} % override default hyphenation
+\usepackage{amssymb}  % for \checkmark character
+% \usepackage{stmaryrd} % for \varobslash character
+% \usepackage{relsize} % used with \smaller command for resizing TM symbol
+% \usepackage{hhline} % used for double horizontal lines in tables
+% \usepackage{amsmath} % used for {align*} in tables
+\usepackage{multirow}
+\usepackage{cellspace}
+\setlength\cellspacetoplimit{1mm}
+\setlength\cellspacebottomlimit{1mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% PDF Metadata
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[pdfauthor={National Cybersecurity Assessment and Technical Services},
+            pdftitle={PCA Template Preview},
+            pdfsubject={PCA Template Preview},
+            pdfkeywords={phishing campaign assessment, cybersecurity, dhs, nppd, nccic, ncats},
+            pdfcreator={XeTeX with hyperref},
+			hidelinks]{hyperref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Geometry Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\geometry{
+  top=0.6in,
+  inner=0.75in,
+  outer=0.75in,
+  bottom=0.6in,
+  headheight=3ex,
+  headsep=2ex,
+}
+
+% Set padding inside fboxes
+\setlength{\fboxsep}{16pt}
+%\geometry{showframe=true}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Header/Footer Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \usepackage{fancyhdr}
+% \pagestyle{fancy}
+% \fancyhead{}
+% \fancyfoot{}
+% \fancyhead[CO,CE]{For Official Use Only (FOUO)}
+% \fancyfoot[CO,CE]{For Official Use Only (FOUO)}
+% \fancyfoot[LE, RO] {\thepage}
+\pagenumbering{gobble}	% turn off page numbering
+% \fancyfoot[LO, RE] {}
+% \renewcommand{\headrulewidth}{0.0pt}
+% \renewcommand{\footrulewidth}{0.0pt}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Date Format Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newdateformat{usvardate}{%
+\monthname[\THEMONTH] \THEDAY, \THEYEAR}
+
+\newdateformat{isodate}{%
+\THEYEAR-\twodigit{\THEMONTH}-\twodigit{\THEDAY}}
+
+\newdateformat{usshortvardate}{%
+\shortmonthname[\THEMONTH] \THEDAY, \THEYEAR}
+
+\newdateformat{monthdayonly}{%
+\shortmonthname[\THEMONTH] \THEDAY}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Color Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% DHS Primary Palette
+\definecolor{dhs-blue}{cmyk}{1.0,0.45,0.0,0.37}
+\definecolor{dhs-gray}{cmyk}{0.0,0.0,0.0,0.28}
+\definecolor{dhs-dark-gray}{cmyk}{0.0,0.0,0.0,0.79}
+\definecolor{dhs-white}{cmyk}{0.0,0.0,0.0,0.0}
+%%% DHS Secondary and Support Palette
+\definecolor{dhs-green}{cmyk}{0.56,0.0,1.0,0.27}
+\definecolor{dhs-light-blue}{cmyk}{1.0,0.16,0.0,0.27}
+\definecolor{dhs-red}{cmyk}{0.0,1.0,0.79,0.20}
+\definecolor{dhs-blue-gray}{cmyk}{0.77,0.51,0.34,0.25}
+\definecolor{dhs-purple}{cmyk}{0.91,0.89,0.36,0.0}
+%%% Additional Colors
+\definecolor{light-gray}{cmyk}{0.0,0.0,0.0,0.14}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Font Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\defaultfontfeatures{Scale=MatchLowercase}
+\setmainfont[Mapping=tex-text]{Franklin Gothic Book}
+\setsansfont[Mapping=tex-text]{Franklin Gothic Book}
+\setmonofont{Source Code Pro}
+
+% DHS Standard Fonts
+\newfontfamily{\FGHeavy}{Franklin Gothic Heavy}
+\newfontfamily{\FGDemi}{Franklin Gothic Demi}
+\newfontfamily{\FGDemiCond}{Franklin Gothic Demi Cond}
+\newfontfamily{\FGMedium}{Franklin Gothic Medium}
+\newfontfamily{\FGMediumCond}{Franklin Gothic Medium Cond}
+
+% Set formats for each heading level
+% \titleformat*{\section}{\LARGE\bfseries\normalfont\color{dhs-dark-gray}}
+% \titleformat*{\subsection}{\Large\bfseries\normalfont\color{dhs-dark-gray}}
+% \titleformat*{\subsubsection}{\large\itshape\normalfont\color{dhs-dark-gray}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Graphics Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\DeclareGraphicsExtensions{.pdf, .jpg, .tif, .png}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Paragraph Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% be default the first paragraph of as section is not indented but the remainder are.
+% in this document we want more uniformity.
+% so we could indent the first paragraph using the following line:
+%\usepackage{indentfirst}
+% or we could supress all paragraph indentations and add a line between paragraphs%\setlength{\parindent}{0pt}
+\setlength{\parindent}{0pt}
+\addtolength{\parskip}{\baselineskip}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Paragraph Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% see: http://tex.stackexchange.com/questions/7347/fixed-column-width-table-with-text-left-aligned-in-cells
+%\usepackage{array}
+%\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Front Matter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+% \renewcommand{\footrulewidth}{0.4pt}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Content Start
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{landscape}
+% "Phishing E-mail Template Complexity Rating Calculator" table
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{|>{\raggedleft}p{2.1in}|Sc|Sc|Sc|Sc|Sc|Sc|Sc|Sc|Sc|Sc|Sc|Sc|Sc|}
+\hline
+\multicolumn{14}{|Sc|}{\cellcolor{dhs-gray}{\fontsize{28pt}{28pt}\FGDemiCond Phishing E-mail Template Complexity Rating Calculator}}                                                                                                                 \\ \hline
+
+\cellcolor{dhs-gray} &
+\multicolumn{3}{|Sc|}{\cellcolor{light-gray}{\fontsize{14pt}{14pt}\FGDemi Appearance}} &
+\multicolumn{3}{|Sc|}{\cellcolor{light-gray}{\fontsize{14pt}{14pt}\FGDemi Sender}} &
+\multicolumn{2}{|Sc|}{\cellcolor{light-gray}{\fontsize{14pt}{14pt}\FGDemi Relevancy}} &
+\multicolumn{4}{|Sc|}{\cellcolor{light-gray}{\fontsize{14pt}{14pt}\FGDemi Behavior}} &
+\multicolumn{1}{|Sc|}{\cellcolor{dhs-gray}} \\
+\cline{2-13}
+
+\multicolumn{1}{|r|}{\cellcolor{dhs-gray}{\fontsize{12pt}{12pt}\FGDemi Category}} &
+\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond Grammar} &
+\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond Link} \\
+  {\fontsize{12pt}{12pt}\FGMediumCond Domain}\end{tabular} &
+\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond Logo/}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond Graphics}\end{tabular} &
+\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond External} &
+\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond Internal} &
+\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond Authoritative} &
+\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond Organization} &
+\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond Public}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond News}\end{tabular} &
+\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond Fear} &
+\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond Duty or}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond Obligation}\end{tabular} &
+\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond Curiosity} &
+\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond Greed} &
+\multicolumn{1}{|Sc|}{\cellcolor{dhs-gray}} \\
+\cline{2-13}
+
+\multicolumn{1}{|r|}{\cellcolor{dhs-gray}{\fontsize{12pt}{12pt}\FGDemi Ranking Scale}} &
+\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond 0=Poor}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond 1=Decent}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond 2=Good}\end{tabular} &
+\multicolumn{3}{c|}{\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond 0=Fake}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond 1=Impersonated}\end{tabular}} &
+\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond 0=Fake}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond 1=Unknown}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond Impersonated}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond 2=Known}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond Impersonated}\end{tabular} &
+\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond 0=None}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond 1=Corporate/Local}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond 2=Federal/State}\end{tabular} &
+\multicolumn{2}{c|}{\cellcolor{light-gray}\begin{tabular}[c]{@{}c@{}}{\fontsize{12pt}{12pt}\FGMediumCond 0=No}\\
+  {\fontsize{12pt}{12pt}\FGMediumCond 1=Yes}\end{tabular}} &
+\multicolumn{4}{c|}{\cellcolor{light-gray}{\fontsize{12pt}{12pt}\FGMediumCond No Score}} &
+\multirow{-3}{*}[-36pt]{\cellcolor{dhs-gray}{\fontsize{14pt}{14pt}\FGDemi Total}} \\
+\hline
+\endhead  % end of table header
+
+<<#templates>>
+\cellcolor{dhs-gray}{\fontsize{14pt}{14pt}\FGDemiCond <<&name>>} &
+<<&appearance.grammar>> &
+<<&appearance.link_domain>> &
+<<&appearance.logo_graphics>> &
+<<&sender.external>> &
+<<&sender.internal>> &
+<<&sender.authoritative>> &
+<<&relevancy.organization>> &
+<<&relevancy.public_news>> &
+\cellcolor{light-gray}<<#behavior.fear>>\checkmark<</behavior.fear>> &
+\cellcolor{light-gray}<<#behavior.duty_obligation>>\checkmark<</behavior.duty_obligation>> &
+\cellcolor{light-gray}<<#behavior.curiosity>>\checkmark<</behavior.curiosity>> &
+\cellcolor{light-gray}<<#behavior.greed>>\checkmark<</behavior.greed>> &
+<<&complexity>> \\
+\hline
+<</templates>>
+\end{longtable}
+\end{landscape}
+
+\newpage
+\begin{landscape}
+% Iterate through all templates and display their complexity level, name & text
+<<#templates>>
+  {\fontsize{16pt}{16pt}\FGDemiCond Level <<&complexity>> Template: "<<&name>>"}
+
+  \fbox{\begin{minipage}{9in}
+    {\fontsize{12pt}{12pt} To: \textless{}Customer List\textgreater{}\newline{}
+    <<&text>>}
+  \end{minipage}}
+
+  \newpage
+<</templates>>
+\end{landscape}
+
+\end{document}
