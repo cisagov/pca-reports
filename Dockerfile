@@ -1,4 +1,4 @@
-FROM dhub.ncats.cyber.dhs.gov:5001/pca-core
+FROM ncats/pca-core
 MAINTAINER David Redmin <david.redmin@hq.dhs.gov>
 ENV PCA_REPORTS_SRC="/usr/src/pca-reports"
 
@@ -19,10 +19,8 @@ WORKDIR ${PCA_REPORTS_SRC}
 COPY . ${PCA_REPORTS_SRC}
 
 RUN pip install --no-cache-dir .[dev]
-COPY ./docker-entrypoint.sh /
+RUN ln -snf ${PCA_REPORTS_SRC}/var/getenv /usr/local/bin
 
 USER pca
 WORKDIR ${PCA_HOME}
-
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["help"]
+CMD ["getenv"]
