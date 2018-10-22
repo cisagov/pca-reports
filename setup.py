@@ -14,7 +14,6 @@ setup(
     description='Reporting for Phishing Campaign Assessment',
     long_description=open('README.md').read(),
     install_requires=[
-        "pytest",
         "pymongo >= 3.4",
         "python-dateutil >= 2.2",
         "pymodm >= 0.4.0",
@@ -24,6 +23,7 @@ setup(
         "pystache >= 0.5.4"    ],
     extras_require={
         'dev': [
+            "pytest",
             'ipython >= 7.0'
         ],
     },
