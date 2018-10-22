@@ -32,7 +32,7 @@ To run a PCA command:
 pca-report -h
 ```
 
-### Caveats, and Gotchas
+### Caveats and Gotchas
 
 Whenever an aliased PCA command is executed, it will use the current working directory as its home volume.  This limits your ability to use absolute paths as parameters to commands, or relative paths that reference parent directories, e.g.; `../foo`.  That means all path parameters to a PCA command must be in the current working directory, or a subdirectory.  
 
@@ -43,7 +43,7 @@ Whenever an aliased PCA command is executed, it will use the current working dir
 | NO!           | `pca-import --customer ../CUST.json`        | parameter file is in a parent directory |
 | NO!           | `pca-import --customer /tmp/CUST.json`      | parameter file is an absolute path |
 
-### Advanced configuration
+### Advanced Configuration
 
 By default, the container will look for your PCA configuration in `/etc/pca`.  This location can be changed by setting the `PCA_CONF_DIR` environment variable to point to your PCA configuration directory.  The commands will also attempt to run using the `ncats/pca-reports` image.  A different image can be used by setting the `PCA_REPORTS_IMAGE` environment variable to the image name.
 
