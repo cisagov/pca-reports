@@ -1,49 +1,69 @@
-PCA Reports
-=============
+# NCATS: PCA Reports
 
-The files needed for reporting on a Phishing Campaign Assessment.  
+The files needed reporting on Phishing Campaign Assessment (PCA) data.
 
+## Configuration
 
-Installation
-------------
-The following installation will allow in-place editing with live updates to all files:
+The `pca-reports` library requires a configuration file.  If that file does not exist, it will be created when a PCA script attempts to read it.  You should then edit the file to ensure it is correct for your environment.  The default location for this file is `/etc/pca/pca.yml`.  An example configuration is below.
 
-sudo pip install -r requirements.txt
+### `/etc/pca/pca.yml`
+```
+default-section: production-read
 
-Configuration file:
-The PCA tools will read `/etc/pca/pca.yml`
-If that file does not exist, it will be created when a PCA script attempts to read it.  You should then edit the file to ensure it is correct for your environment.
+production-read:
+  database-name: pca
+  database-uri: mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@host.docker.internal:27017/pca
 
+production-write:
+  database-name: pca
+  database-uri: mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@host.docker.internal:27017/pca
+```
 
-Docker Goodies
---------------
-To build the Docker container for pca-reports locally:
+## Using PCA Commands with Docker
+The PCA commands implemented in the docker container can be aliased into the host environment by using the procedure below.
+
+Alias the container commands to the local environment:
+```bash
+eval "$(docker run ncats/pca-reports)"
+```
+
+To run a PCA command:
+```bash
+pca-report -h
+```
+
+### Caveats, and Gotchas
+
+Whenever an aliased PCA command is executed, it will use the current working directory as its home volume.  This limits your ability to use absolute paths as parameters to commands, or relative paths that reference parent directories, e.g.; `../foo`.  That means all path parameters to a PCA command must be in the current working directory, or a subdirectory.  
+
+| Do this?        | Command                                   | Reason  |
+| ------------- |---------------------------------------------| --------|
+| Yes           | `pca-import --customer CUST.json`           | parameter file is in the current directory |
+| Yes           | `pca-import --customer sample/CUST.json`    | parameter file is in a sub-directory |
+| NO!           | `pca-import --customer ../CUST.json`        | parameter file is in a parent directory |
+| NO!           | `pca-import --customer /tmp/CUST.json`      | parameter file is an absolute path |
+
+### Advanced configuration
+
+By default, the container will look for your PCA configuration in `/etc/pca`.  This location can be changed by setting the `PCA_CONF_DIR` environment variable to point to your PCA configuration directory.  The commands will also attempt to run using the `ncats/pca-reports` image.  A different image can be used by setting the `PCA_REPORTS_IMAGE` environment variable to the image name.
+
+Example:
+```
+export PCA_CONF_DIR=/private/etc/pca
+export PCA_REPORTS_IMAGE=dhub.ncats.cyber.dhs.gov:5001/pca-reports
+```
+
+### Building the pca-reports container
+To build the Docker container for pca-reports:
+
 ```bash
 docker build -t ncats/pca-reports .
 ```
 
-To build the Docker container for pca-reports in NCATS Docker hub:
-```bash
-docker build -t dhub.ncats.cyber.dhs.gov:5001/pca-reports .
-```
+## Manual Installation
+To manually install on your host system, run the following command from the pca-reports source directory:
+`sudo pip install --no-cache-dir .`
 
-Create aliases to the run commands inside a container (replace paths below as appropriate):
-```bash
-alias pca-import='docker run -it --rm --volume /private/etc/pca:/etc/pca --volume /tmp/pca:/home/pca dhub.ncats.cyber.dhs.gov:5001/pca-reports pca-import'
-alias pca-report='docker run -it --rm --volume /private/etc/pca:/etc/pca --volume /tmp/pca:/home/pca dhub.ncats.cyber.dhs.gov:5001/pca-reports pca-report'
-alias pca-tool='docker run -it --rm --volume /private/etc/pca:/etc/pca --volume /tmp/pca:/home/pca dhub.ncats.cyber.dhs.gov:5001/pca-reports pca-tool'
-alias pca-template-preview='docker run -it --rm --volume /private/etc/pca:/etc/pca --volume /tmp/pca:/home/pca dhub.ncats.cyber.dhs.gov:5001/pca-reports pca-template-preview'
-```
-
-To run a command after creating aliases above and sourcing them in your shell:
-```bash
-pca-import -h
-pca-tool -h
-pca-report -h
-pca-template-preview -h
-```
-
-To start a new pca-reports container and attach to a shell (replace paths below as appropriate):
-```bash
-docker run -it --volume /private/etc/pca:/etc/pca --volume /tmp/pca:/home/pca --entrypoint /bin/bash dhub.ncats.cyber.dhs.gov:5001/pca-reports
-```
+## Development Installation
+If you are developing the source, the following installation command will allow in-place editing with live updates to the libraries and command line utilities:
+`sudo pip install --no-cache-dir -e .[dev]`
