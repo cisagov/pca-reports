@@ -406,7 +406,7 @@ def output_assessment_click_rates_by_indicators(assessmentDoc):
         current_campaign_emails_sent = campaign_emails_clicks[campaign._id].get('emails_sent', 0)
         current_campaign_unique_clicks = campaign_emails_clicks[campaign._id].get('unique_user_clicks', 0)
         for category in click_rates.keys():
-            for indicator_name,indicator_value in campaign.template._data[category].items():
+            for indicator_name,indicator_value in getattr(campaign.template, category).items():
                 click_rates[category][indicator_name][indicator_value]['emails_sent'] += current_campaign_emails_sent
                 click_rates[category][indicator_name][indicator_value]['unique_clicks'] += current_campaign_unique_clicks
 
