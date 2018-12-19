@@ -1,0 +1,2 @@
+recursive-include pca_report/assets *
+include pca_report/template_preview/template_preview.mustache
