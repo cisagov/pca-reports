@@ -407,8 +407,12 @@ def output_assessment_click_rates_by_indicators(assessmentDoc):
         current_campaign_unique_clicks = campaign_emails_clicks[campaign._id].get('unique_user_clicks', 0)
         for category in click_rates.keys():
             for indicator_name,indicator_value in getattr(campaign.template, category).items():
-                click_rates[category][indicator_name][indicator_value]['emails_sent'] += current_campaign_emails_sent
-                click_rates[category][indicator_name][indicator_value]['unique_clicks'] += current_campaign_unique_clicks
+                # Adjust to prevent double count of Sender External/Internal
+                if indicator_name == "external" and indicator_value == 0 and campaign.template.sender["internal"] != 0:
+                       continue # Continue as this will be counted under internal.
+                else:
+                    click_rates[category][indicator_name][indicator_value]['emails_sent'] += current_campaign_emails_sent
+                    click_rates[category][indicator_name][indicator_value]['unique_clicks'] += current_campaign_unique_clicks
 
     # output the CSV
     print('category,indicator,emails_sent,unique_clicks,click_rate')
