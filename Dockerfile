@@ -1,5 +1,5 @@
 FROM ncats/pca-core
-MAINTAINER David Redmin <david.redmin@beta.dhs.gov>
+MAINTAINER Dave Redmin <david.redmin@trio.dhs.gov>
 ENV PCA_REPORTS_SRC="/usr/src/pca-reports"
 
 USER root

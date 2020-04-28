@@ -4,7 +4,7 @@ setup(
     name='pca-reports',
     version='0.0.1',
     author='Dave Redmin',
-    author_email='david.redmin@hq.dhs.gov',
+    author_email='david.redmin@trio.dhs.gov',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
