@@ -10,7 +10,7 @@ setup(
     zip_safe=False,
     scripts=["bin/pca-report", "bin/pca-template-preview"],
     # url='http://pypi.python.org/pypi/cyhy/',
-    license="LICENSE.txt",
+    license="LICENSE",
     description="Reporting for Phishing Campaign Assessment",
     long_description=open("README.md").read(),
     install_requires=[
