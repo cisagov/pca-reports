@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-'''Report data from a Phishing Campaign Assessment (PCA)
+"""Report data from a Phishing Campaign Assessment (PCA)
 
 Usage:
   pca-report [--section SECTION] [--clicks | --applications | --summary | --raw-clicks | --time-to-clicks | --complexity] ASSESSMENT_ID
@@ -17,12 +17,16 @@ Options:
   -x --complexity                Output a CSV with click rates of complexity indicators
   -h --help                      Show this screen.
   --version                      Show version.
-'''
+"""
 
 from docopt import docopt
-args = docopt(__doc__, version='v0.0.1')
+
+args = docopt(__doc__, version="v0.0.1")
 from pca.db.database import connect_from_config
-connect_from_config(args['--section'])  # Must connect to the DB before we can import our MongoModels
+
+connect_from_config(
+    args["--section"]
+)  # Must connect to the DB before we can import our MongoModels
 from pca.db.database_model import *
 from pca.core.common import INDICATOR_LOOKUP
 
@@ -32,8 +36,13 @@ from collections import defaultdict, OrderedDict
 from datetime import timedelta
 from pymodm.errors import DoesNotExist
 
+
 def calculate_email_metrics(campaign):
-    emails_sent = list(EmailDoc.objects.raw({'campaign':campaign._id}).order_by([('time', pymongo.ASCENDING)]))
+    emails_sent = list(
+        EmailDoc.objects.raw({"campaign": campaign._id}).order_by(
+            [("time", pymongo.ASCENDING)]
+        )
+    )
     if emails_sent:
         campaign.first_email_sent_time = emails_sent[0].time
     else:
@@ -41,224 +50,414 @@ def calculate_email_metrics(campaign):
     campaign.emails_sent_attempted = len(emails_sent)
     successful_emails_sent = 0
     for email in emails_sent:
-        if email.status == 'SUCCESS':
+        if email.status == "SUCCESS":
             successful_emails_sent += 1
     campaign.emails_sent_successful = successful_emails_sent
 
+
 def calculate_click_metrics(campaign):
     # Always call calculate_email_metrics() before calling calculate_click_metrics()
-    clicks = list(ClickDoc.objects.raw({'campaign':campaign._id, 'user':{'$ne':None}}).order_by([('time', pymongo.ASCENDING)]))
+    clicks = list(
+        ClickDoc.objects.raw(
+            {"campaign": campaign._id, "user": {"$ne": None}}
+        ).order_by([("time", pymongo.ASCENDING)])
+    )
     if clicks:
-        campaign.time_to_first_click = str(clicks[0].time - campaign.first_email_sent_time).split('.')[0]
-        campaign.time_to_last_click = str(clicks[-1].time - campaign.first_email_sent_time).split('.')[0]
+        campaign.time_to_first_click = str(
+            clicks[0].time - campaign.first_email_sent_time
+        ).split(".")[0]
+        campaign.time_to_last_click = str(
+            clicks[-1].time - campaign.first_email_sent_time
+        ).split(".")[0]
     else:
         campaign.time_to_first_click = campaign.time_to_last_click = None
     campaign.total_clicks = len(clicks)
-    user_click_counts = defaultdict(lambda:0)   # users start with 0 clicks
+    user_click_counts = defaultdict(lambda: 0)  # users start with 0 clicks
     for click in clicks:
         user_click_counts[click.user._id] += 1
-    campaign.unique_user_clicks = len(user_click_counts)      # number of unique users that clicked
-    campaign.user_click_summary = {'1 time':0, '2-3 times':0, '4-5 times':0, '6-10 times':0, '>10 times':0}
+    campaign.unique_user_clicks = len(
+        user_click_counts
+    )  # number of unique users that clicked
+    campaign.user_click_summary = {
+        "1 time": 0,
+        "2-3 times": 0,
+        "4-5 times": 0,
+        "6-10 times": 0,
+        ">10 times": 0,
+    }
     for click_count in user_click_counts.values():
         if click_count == 1:
-            campaign.user_click_summary['1 time'] += 1
+            campaign.user_click_summary["1 time"] += 1
         elif click_count == 2 or click_count == 3:
-            campaign.user_click_summary['2-3 times'] += 1
+            campaign.user_click_summary["2-3 times"] += 1
         elif click_count == 4 or click_count == 5:
-            campaign.user_click_summary['4-5 times'] += 1
+            campaign.user_click_summary["4-5 times"] += 1
         elif click_count >= 6 and click_count <= 10:
-            campaign.user_click_summary['6-10 times'] += 1
+            campaign.user_click_summary["6-10 times"] += 1
         elif click_count > 10:
-            campaign.user_click_summary['>10 times'] += 1
+            campaign.user_click_summary[">10 times"] += 1
+
 
 def output_assessment_click_report(assessmentDoc):
     # output a CSV of assessment click metrics
     assessment_id = assessmentDoc._id
-    campaigns = list(CampaignDoc.objects.raw({'assessment':assessment_id}).order_by([('start_time', pymongo.ASCENDING)]))
-    print('{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}'.format('Week', 'Complexity Level', 'Template', 'User Group', 'Campaign Start', 'Campaign End', 'Emails Sent (Attempted)', 'Emails Sent (Successful)', 'Unique Clicks', 'Total Clicks', 'Users Who Clicked 1 Time', 'Users Who Clicked 2-3 Times', 'Users Who Clicked 4-5 Times', 'Users Who Clicked 6-10 Times', 'Users Who Clicked >10 Times', 'Time To First Click', 'Time To Last Click'))
+    campaigns = list(
+        CampaignDoc.objects.raw({"assessment": assessment_id}).order_by(
+            [("start_time", pymongo.ASCENDING)]
+        )
+    )
+    print(
+        "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}".format(
+            "Week",
+            "Complexity Level",
+            "Template",
+            "User Group",
+            "Campaign Start",
+            "Campaign End",
+            "Emails Sent (Attempted)",
+            "Emails Sent (Successful)",
+            "Unique Clicks",
+            "Total Clicks",
+            "Users Who Clicked 1 Time",
+            "Users Who Clicked 2-3 Times",
+            "Users Who Clicked 4-5 Times",
+            "Users Who Clicked 6-10 Times",
+            "Users Who Clicked >10 Times",
+            "Time To First Click",
+            "Time To Last Click",
+        )
+    )
     for campaign in campaigns:
         campaign.week = campaigns.index(campaign) + 1
-        campaign.user_group = 'TBD'
-        campaign.start_time_str = campaign.start_time.strftime('%Y-%m-%d %H:%M:%S')
-        campaign.end_time_str = campaign.end_time.strftime('%Y-%m-%d %H:%M:%S')
+        campaign.user_group = "TBD"
+        campaign.start_time_str = campaign.start_time.strftime("%Y-%m-%d %H:%M:%S")
+        campaign.end_time_str = campaign.end_time.strftime("%Y-%m-%d %H:%M:%S")
         calculate_email_metrics(campaign)
         calculate_click_metrics(campaign)
-        print('{0.week},{0.template.complexity},"{0.template.name}",{0.user_group},{0.start_time_str},{0.end_time_str},{0.emails_sent_attempted},{0.emails_sent_successful},{0.unique_user_clicks},{0.total_clicks},{0.user_click_summary[1 time]},{0.user_click_summary[2-3 times]},{0.user_click_summary[4-5 times]},{0.user_click_summary[6-10 times]},{0.user_click_summary[>10 times]},"{0.time_to_first_click}", "{0.time_to_last_click}"'.format(campaign))
+        print(
+            '{0.week},{0.template.complexity},"{0.template.name}",{0.user_group},{0.start_time_str},{0.end_time_str},{0.emails_sent_attempted},{0.emails_sent_successful},{0.unique_user_clicks},{0.total_clicks},{0.user_click_summary[1 time]},{0.user_click_summary[2-3 times]},{0.user_click_summary[4-5 times]},{0.user_click_summary[6-10 times]},{0.user_click_summary[>10 times]},"{0.time_to_first_click}", "{0.time_to_last_click}"'.format(
+                campaign
+            )
+        )
     return True
 
+
 def calculate_application_metrics(campaign):
-    applications = list(ApplicationDoc.objects.raw({'campaign':campaign._id}).order_by([('name', pymongo.ASCENDING), ('version', pymongo.ASCENDING)]))
-    campaign.app_version_counts = defaultdict(lambda:defaultdict(lambda:0))   # count each app name/version combo (start at 0)
+    applications = list(
+        ApplicationDoc.objects.raw({"campaign": campaign._id}).order_by(
+            [("name", pymongo.ASCENDING), ("version", pymongo.ASCENDING)]
+        )
+    )
+    campaign.app_version_counts = defaultdict(
+        lambda: defaultdict(lambda: 0)
+    )  # count each app name/version combo (start at 0)
     for app in applications:
         campaign.app_version_counts[app.name][app.version] += 1
+
 
 def output_assessment_application_report(assessmentDoc):
     # output a CSV of assessment application metrics
     assessment_id = assessmentDoc._id
-    campaigns = list(CampaignDoc.objects.raw({'assessment':assessment_id}).order_by([('start_time', pymongo.ASCENDING)]))
-    print('{},{},{},{},{},{}'.format('Week', 'Campaign Start', 'Campaign End', 'Application', 'Version', 'Count', ))
+    campaigns = list(
+        CampaignDoc.objects.raw({"assessment": assessment_id}).order_by(
+            [("start_time", pymongo.ASCENDING)]
+        )
+    )
+    print(
+        "{},{},{},{},{},{}".format(
+            "Week", "Campaign Start", "Campaign End", "Application", "Version", "Count",
+        )
+    )
     for campaign in campaigns:
         campaign.week = campaigns.index(campaign) + 1
-        campaign.start_time_str = campaign.start_time.strftime('%Y-%m-%d %H:%M:%S')
-        campaign.end_time_str = campaign.end_time.strftime('%Y-%m-%d %H:%M:%S')
+        campaign.start_time_str = campaign.start_time.strftime("%Y-%m-%d %H:%M:%S")
+        campaign.end_time_str = campaign.end_time.strftime("%Y-%m-%d %H:%M:%S")
         calculate_application_metrics(campaign)
         for app_name, version_counts in campaign.app_version_counts.items():
             for app_version, count in version_counts.items():
-                print('{0.week},{0.start_time_str},{0.end_time_str},{1},{2},{3}'.format(campaign, app_name, app_version, count))
+                print(
+                    "{0.week},{0.start_time_str},{0.end_time_str},{1},{2},{3}".format(
+                        campaign, app_name, app_version, count
+                    )
+                )
     return True
 
+
 def output_assessment_click_summary_stats(assessment_id):
-    unique_user_clicks_assessment = len(list(ClickDoc.objects.raw({'assessment':assessment_id, 'user':{'$ne':None}}).aggregate({'$group':{'_id':'$user'}})))
-    print('# Unique users that clicked in entire assessment {}'.format(assessment_id))
-    print('{}'.format(unique_user_clicks_assessment))
+    unique_user_clicks_assessment = len(
+        list(
+            ClickDoc.objects.raw(
+                {"assessment": assessment_id, "user": {"$ne": None}}
+            ).aggregate({"$group": {"_id": "$user"}})
+        )
+    )
+    print("# Unique users that clicked in entire assessment {}".format(assessment_id))
+    print("{}".format(unique_user_clicks_assessment))
 
-    total_user_clicks_assessment = len(list(ClickDoc.objects.raw({'assessment':assessment_id, 'user':{'$ne':None}})))
-    print('\n# Total clicks in entire assessment {}'.format(assessment_id))
-    print('{}'.format(total_user_clicks_assessment))
+    total_user_clicks_assessment = len(
+        list(ClickDoc.objects.raw({"assessment": assessment_id, "user": {"$ne": None}}))
+    )
+    print("\n# Total clicks in entire assessment {}".format(assessment_id))
+    print("{}".format(total_user_clicks_assessment))
 
-def output_clicks_by_label_vs_complexity(assessment_id, label_names, complexities, user_labels, complexity_levels):
+
+def output_clicks_by_label_vs_complexity(
+    assessment_id, label_names, complexities, user_labels, complexity_levels
+):
     # build dict of labels & complexities mapped to click counts per user
-    label_complexity_click_counts = defaultdict(lambda:defaultdict())
+    label_complexity_click_counts = defaultdict(lambda: defaultdict())
     for label in label_names:
         for complexity in complexity_levels:
-            label_complexity_click_counts[label][complexity] = list(ClickDoc.objects.raw({'campaign':{'$in':complexities[complexity]['campaigns']}, 'user':{'$in':list(user_labels[label])}}).aggregate({'$group':{ '_id': '$user', 'click_count': {'$sum': 1}}}))
+            label_complexity_click_counts[label][complexity] = list(
+                ClickDoc.objects.raw(
+                    {
+                        "campaign": {"$in": complexities[complexity]["campaigns"]},
+                        "user": {"$in": list(user_labels[label])},
+                    }
+                ).aggregate({"$group": {"_id": "$user", "click_count": {"$sum": 1}}})
+            )
 
-    print('\n# Unique clicks in assessment {}, user label vs. complexity level'.format(assessment_id))
-    print('Label', end='')
+    print(
+        "\n# Unique clicks in assessment {}, user label vs. complexity level".format(
+            assessment_id
+        )
+    )
+    print("Label", end="")
     for complexity in complexity_levels:
-        print(',Level {}'.format(complexity), end='')
+        print(",Level {}".format(complexity), end="")
     print()
     for label in label_names:
-        print('{}'.format(label), end='')
+        print("{}".format(label), end="")
         for complexity in complexity_levels:
-            print(',{}'.format(len(label_complexity_click_counts[label][complexity])), end='')
+            print(
+                ",{}".format(len(label_complexity_click_counts[label][complexity])),
+                end="",
+            )
         print()
 
-    print('\n# Total clicks in assessment {}, user label vs. complexity level'.format(assessment_id))
-    print('Label', end='')
+    print(
+        "\n# Total clicks in assessment {}, user label vs. complexity level".format(
+            assessment_id
+        )
+    )
+    print("Label", end="")
     for complexity in complexity_levels:
-        print(',Level {}'.format(complexity), end='')
+        print(",Level {}".format(complexity), end="")
     print()
     for label in label_names:
-        print('{}'.format(label), end='')
+        print("{}".format(label), end="")
         for complexity in complexity_levels:
             total_clicks = 0
             for count in label_complexity_click_counts[label][complexity]:
-                total_clicks += count['click_count']
-            print(',{}'.format(total_clicks), end='')
+                total_clicks += count["click_count"]
+            print(",{}".format(total_clicks), end="")
         print()
     return label_complexity_click_counts
 
+
 def get_click_summary_by_campaign_vs_label(campaigns, label_names, user_labels):
     # build dict of campaigns and labels mapped to click counts per user
-    campaign_label_click_counts = defaultdict(lambda:defaultdict())
-    campaign_label_click_summary = defaultdict(lambda:defaultdict())    # to track click count groups
+    campaign_label_click_counts = defaultdict(lambda: defaultdict())
+    campaign_label_click_summary = defaultdict(
+        lambda: defaultdict()
+    )  # to track click count groups
     for campaign in campaigns:
         campaign.week = campaigns.index(campaign) + 1
         for label in label_names:
-            campaign_label_click_counts[campaign.week][label] = list(ClickDoc.objects.raw({'campaign':campaign._id, 'user':{'$in':list(user_labels[label])}}).aggregate({'$group':{ '_id': '$user', 'click_count': {'$sum': 1}}}))
+            campaign_label_click_counts[campaign.week][label] = list(
+                ClickDoc.objects.raw(
+                    {
+                        "campaign": campaign._id,
+                        "user": {"$in": list(user_labels[label])},
+                    }
+                ).aggregate({"$group": {"_id": "$user", "click_count": {"$sum": 1}}})
+            )
 
             # build dict of campaigns and labels mapped to number of users in each click count group
-            campaign_label_click_summary[campaign.week][label] = {'1 time':0, '2-3 times':0, '4-5 times':0, '6-10 times':0, '>10 times':0}
+            campaign_label_click_summary[campaign.week][label] = {
+                "1 time": 0,
+                "2-3 times": 0,
+                "4-5 times": 0,
+                "6-10 times": 0,
+                ">10 times": 0,
+            }
             for user in campaign_label_click_counts[campaign.week][label]:
-                if user['click_count'] == 1:
-                    campaign_label_click_summary[campaign.week][label]['1 time'] += 1
-                elif user['click_count'] == 2 or user['click_count'] == 3:
-                    campaign_label_click_summary[campaign.week][label]['2-3 times'] += 1
-                elif user['click_count'] == 4 or user['click_count'] == 5:
-                    campaign_label_click_summary[campaign.week][label]['4-5 times'] += 1
-                elif user['click_count'] >= 6 and user['click_count'] <= 10:
-                    campaign_label_click_summary[campaign.week][label]['6-10 times'] += 1
-                elif user['click_count'] > 10:
-                    campaign_label_click_summary[campaign.week][label]['>10 times'] += 1
+                if user["click_count"] == 1:
+                    campaign_label_click_summary[campaign.week][label]["1 time"] += 1
+                elif user["click_count"] == 2 or user["click_count"] == 3:
+                    campaign_label_click_summary[campaign.week][label]["2-3 times"] += 1
+                elif user["click_count"] == 4 or user["click_count"] == 5:
+                    campaign_label_click_summary[campaign.week][label]["4-5 times"] += 1
+                elif user["click_count"] >= 6 and user["click_count"] <= 10:
+                    campaign_label_click_summary[campaign.week][label][
+                        "6-10 times"
+                    ] += 1
+                elif user["click_count"] > 10:
+                    campaign_label_click_summary[campaign.week][label][">10 times"] += 1
     return campaign_label_click_counts, campaign_label_click_summary
 
+
 def get_assessment_click_summary_by_label(assessment_id, label_names, user_labels):
-    assessment_label_click_summary = defaultdict(lambda:defaultdict())
+    assessment_label_click_summary = defaultdict(lambda: defaultdict())
     for label in label_names:
-        assessment_label_click_summary[label] = {'1 time':0, '2-3 times':0, '4-5 times':0, '6-10 times':0, '>10 times':0}
-        for user in list(ClickDoc.objects.raw({'assessment':assessment_id, 'user':{'$in':list(user_labels[label])}}).aggregate({'$group':{ '_id': '$user', 'click_count': {'$sum': 1}}})):
-            if user['click_count'] == 1:
-                assessment_label_click_summary[label]['1 time'] += 1
-            elif user['click_count'] == 2 or user['click_count'] == 3:
-                assessment_label_click_summary[label]['2-3 times'] += 1
-            elif user['click_count'] == 4 or user['click_count'] == 5:
-                assessment_label_click_summary[label]['4-5 times'] += 1
-            elif user['click_count'] >= 6 and user['click_count'] <= 10:
-                assessment_label_click_summary[label]['6-10 times'] += 1
-            elif user['click_count'] > 10:
-                assessment_label_click_summary[label]['>10 times'] += 1
+        assessment_label_click_summary[label] = {
+            "1 time": 0,
+            "2-3 times": 0,
+            "4-5 times": 0,
+            "6-10 times": 0,
+            ">10 times": 0,
+        }
+        for user in list(
+            ClickDoc.objects.raw(
+                {"assessment": assessment_id, "user": {"$in": list(user_labels[label])}}
+            ).aggregate({"$group": {"_id": "$user", "click_count": {"$sum": 1}}})
+        ):
+            if user["click_count"] == 1:
+                assessment_label_click_summary[label]["1 time"] += 1
+            elif user["click_count"] == 2 or user["click_count"] == 3:
+                assessment_label_click_summary[label]["2-3 times"] += 1
+            elif user["click_count"] == 4 or user["click_count"] == 5:
+                assessment_label_click_summary[label]["4-5 times"] += 1
+            elif user["click_count"] >= 6 and user["click_count"] <= 10:
+                assessment_label_click_summary[label]["6-10 times"] += 1
+            elif user["click_count"] > 10:
+                assessment_label_click_summary[label][">10 times"] += 1
     return assessment_label_click_summary
 
-def output_clicks_by_campaign_vs_label(assessment_id, campaigns, label_names, campaign_label_click_counts):
-    print('\n# Unique clicks in assessment {}, campaign vs. user label'.format(assessment_id))
-    print('Week', end='')
+
+def output_clicks_by_campaign_vs_label(
+    assessment_id, campaigns, label_names, campaign_label_click_counts
+):
+    print(
+        "\n# Unique clicks in assessment {}, campaign vs. user label".format(
+            assessment_id
+        )
+    )
+    print("Week", end="")
     for label in label_names:
-        print(',{}'.format(label), end='')
+        print(",{}".format(label), end="")
     print()
     for campaign in campaigns:
         campaign.week = campaigns.index(campaign) + 1
-        print('Week {}'.format(campaign.week), end='')
+        print("Week {}".format(campaign.week), end="")
         for label in label_names:
-            print(',{}'.format(len(campaign_label_click_counts[campaign.week][label])), end='')
+            print(
+                ",{}".format(len(campaign_label_click_counts[campaign.week][label])),
+                end="",
+            )
         print()
 
-    print('\n# Total clicks in assessment {}, campaign vs. user label'.format(assessment_id))
-    print('Week', end='')
+    print(
+        "\n# Total clicks in assessment {}, campaign vs. user label".format(
+            assessment_id
+        )
+    )
+    print("Week", end="")
     for label in label_names:
-        print(',{}'.format(label), end='')
+        print(",{}".format(label), end="")
     print()
     for campaign in campaigns:
         campaign.week = campaigns.index(campaign) + 1
-        print('Week {}'.format(campaign.week), end='')
+        print("Week {}".format(campaign.week), end="")
         for label in label_names:
             total_clicks = 0
             for count in campaign_label_click_counts[campaign.week][label]:
-                total_clicks += count['click_count']
-            print(',{}'.format(total_clicks), end='')
+                total_clicks += count["click_count"]
+            print(",{}".format(total_clicks), end="")
         print()
     return True
 
-def output_click_summary_by_label(assessment_id, label_names, assessment_label_click_summary, campaigns, campaign_label_click_summary):
-    print('\n# Overall user click summary in assessment {} by user label'.format(assessment_id))
-    print('Label,Users Who Clicked 1 Time,Users Who Clicked 2-3 Times,Users Who Clicked 4-5 Times,Users Who Clicked 6-10 Times,Users Who Clicked >10 Times')
+
+def output_click_summary_by_label(
+    assessment_id,
+    label_names,
+    assessment_label_click_summary,
+    campaigns,
+    campaign_label_click_summary,
+):
+    print(
+        "\n# Overall user click summary in assessment {} by user label".format(
+            assessment_id
+        )
+    )
+    print(
+        "Label,Users Who Clicked 1 Time,Users Who Clicked 2-3 Times,Users Who Clicked 4-5 Times,Users Who Clicked 6-10 Times,Users Who Clicked >10 Times"
+    )
     for label in label_names:
-        print('{}'.format(label), end='')
-        for click_group in ['1 time', '2-3 times', '4-5 times', '6-10 times', '>10 times']:
-            print(',{}'.format(assessment_label_click_summary[label][click_group]), end='')
+        print("{}".format(label), end="")
+        for click_group in [
+            "1 time",
+            "2-3 times",
+            "4-5 times",
+            "6-10 times",
+            ">10 times",
+        ]:
+            print(
+                ",{}".format(assessment_label_click_summary[label][click_group]), end=""
+            )
         print()
 
     for campaign in campaigns:
         campaign.week = campaigns.index(campaign) + 1
-        print('\n# Week {} user click summary by user label'.format(campaign.week))
-        print('# Campaign: {}   Assessment: {}'.format(campaign._id, assessment_id))
-        print('# Complexity: {}   Email Subject: {}'.format(campaign.template.complexity, campaign.subject))
-        print('# Campaign Start: {}'.format(campaign.start_time.strftime('%Y-%m-%d %H:%M')))
-        print('# Campaign End:   {}'.format(campaign.end_time.strftime('%Y-%m-%d %H:%M')))
-        print('Label,Users Who Clicked 1 Time,Users Who Clicked 2-3 Times,Users Who Clicked 4-5 Times,Users Who Clicked 6-10 Times,Users Who Clicked >10 Times')
+        print("\n# Week {} user click summary by user label".format(campaign.week))
+        print("# Campaign: {}   Assessment: {}".format(campaign._id, assessment_id))
+        print(
+            "# Complexity: {}   Email Subject: {}".format(
+                campaign.template.complexity, campaign.subject
+            )
+        )
+        print(
+            "# Campaign Start: {}".format(
+                campaign.start_time.strftime("%Y-%m-%d %H:%M")
+            )
+        )
+        print(
+            "# Campaign End:   {}".format(campaign.end_time.strftime("%Y-%m-%d %H:%M"))
+        )
+        print(
+            "Label,Users Who Clicked 1 Time,Users Who Clicked 2-3 Times,Users Who Clicked 4-5 Times,Users Who Clicked 6-10 Times,Users Who Clicked >10 Times"
+        )
         for label in label_names:
-            print('{}'.format(label), end='')
-            for click_group in ['1 time', '2-3 times', '4-5 times', '6-10 times', '>10 times']:
-                print(',{}'.format(campaign_label_click_summary[campaign.week][label][click_group]), end='')
+            print("{}".format(label), end="")
+            for click_group in [
+                "1 time",
+                "2-3 times",
+                "4-5 times",
+                "6-10 times",
+                ">10 times",
+            ]:
+                print(
+                    ",{}".format(
+                        campaign_label_click_summary[campaign.week][label][click_group]
+                    ),
+                    end="",
+                )
             print()
     return True
+
 
 def output_assessment_summary_report(assessmentDoc):
     # output a series of CSVs with various assessment summary metrics
     assessment_id = assessmentDoc._id
-    campaigns = list(CampaignDoc.objects.raw({'assessment':assessment_id}).order_by([('start_time', pymongo.ASCENDING)]))
+    campaigns = list(
+        CampaignDoc.objects.raw({"assessment": assessment_id}).order_by(
+            [("start_time", pymongo.ASCENDING)]
+        )
+    )
 
     # build dict of complexity levels mapped to lists of campaigns and users with that complexity level
-    complexities = defaultdict(lambda:defaultdict(lambda:list()))
-    assessment_users = set()   # to track list of all users in the entire assessment
+    complexities = defaultdict(lambda: defaultdict(lambda: list()))
+    assessment_users = set()  # to track list of all users in the entire assessment
     for campaign in campaigns:
-        complexities[campaign.template.complexity]['campaigns'] += [campaign._id]
-        complexities[campaign.template.complexity]['users'] += campaign.users
-        assessment_users.update(campaign.users)     # add users from this campaign to the set of overall assessment_users
+        complexities[campaign.template.complexity]["campaigns"] += [campaign._id]
+        complexities[campaign.template.complexity]["users"] += campaign.users
+        assessment_users.update(
+            campaign.users
+        )  # add users from this campaign to the set of overall assessment_users
 
     # build dict of all user labels mapped to user ids with that label
-    user_labels = defaultdict(lambda:set())
-    for user in UserDoc.objects.raw({'_id':{'$in':list(assessment_users)}}):
+    user_labels = defaultdict(lambda: set())
+    for user in UserDoc.objects.raw({"_id": {"$in": list(assessment_users)}}):
         for label in user.customer_defined_labels.get(assessment_id) or []:
             user_labels[label].add(user._id)
 
@@ -269,18 +468,34 @@ def output_assessment_summary_report(assessmentDoc):
 
     output_assessment_click_summary_stats(assessment_id)
 
-    label_complexity_click_counts = output_clicks_by_label_vs_complexity(assessment_id, label_names, complexities, user_labels, complexity_levels)
+    label_complexity_click_counts = output_clicks_by_label_vs_complexity(
+        assessment_id, label_names, complexities, user_labels, complexity_levels
+    )
 
-    campaign_label_click_counts, campaign_label_click_summary = get_click_summary_by_campaign_vs_label(campaigns, label_names, user_labels)
+    (
+        campaign_label_click_counts,
+        campaign_label_click_summary,
+    ) = get_click_summary_by_campaign_vs_label(campaigns, label_names, user_labels)
 
-    assessment_label_click_summary = get_assessment_click_summary_by_label(assessment_id, label_names, user_labels)
+    assessment_label_click_summary = get_assessment_click_summary_by_label(
+        assessment_id, label_names, user_labels
+    )
 
-    output_clicks_by_campaign_vs_label(assessment_id, campaigns, label_names, campaign_label_click_counts)
+    output_clicks_by_campaign_vs_label(
+        assessment_id, campaigns, label_names, campaign_label_click_counts
+    )
 
-    output_click_summary_by_label(assessment_id, label_names, assessment_label_click_summary, campaigns, campaign_label_click_summary)
+    output_click_summary_by_label(
+        assessment_id,
+        label_names,
+        assessment_label_click_summary,
+        campaigns,
+        campaign_label_click_summary,
+    )
 
-    #import IPython; IPython.embed() #<<< BREAKPOINT >>>
+    # import IPython; IPython.embed() #<<< BREAKPOINT >>>
     return True
+
 
 def output_assessment_raw_clicks_report(assessmentDoc):
     assessment_id = assessmentDoc._id
@@ -288,13 +503,23 @@ def output_assessment_raw_clicks_report(assessmentDoc):
     # Build dict of relevant campaign data
     campaigns = dict()
     week = 1
-    for campaign in CampaignDoc.objects.raw({'assessment':assessment_id}).order_by([('start_time', pymongo.ASCENDING)]):
-        campaigns[campaign._id] = {'week':week, 'complexity':campaign.template.complexity,
-                                   'subject':campaign.subject, 'start_time':campaign.start_time}
+    for campaign in CampaignDoc.objects.raw({"assessment": assessment_id}).order_by(
+        [("start_time", pymongo.ASCENDING)]
+    ):
+        campaigns[campaign._id] = {
+            "week": week,
+            "complexity": campaign.template.complexity,
+            "subject": campaign.subject,
+            "start_time": campaign.start_time,
+        }
         week += 1
 
     # Determine maximum number of customer_defined_labels for users that clicked in this assessment
-    clicks = list(ClickDoc.objects.raw({'assessment':assessment_id, 'user':{'$ne':None}}).order_by([('time', pymongo.ASCENDING)]))
+    clicks = list(
+        ClickDoc.objects.raw(
+            {"assessment": assessment_id, "user": {"$ne": None}}
+        ).order_by([("time", pymongo.ASCENDING)])
+    )
     max_labels = 1
     for click in clicks:
         if click.user.customer_defined_labels.get(assessment_id):
@@ -303,48 +528,126 @@ def output_assessment_raw_clicks_report(assessmentDoc):
                 max_labels = num_labels
 
     # Output CSV data for clicks
-    print('Masked ID,Week,Complexity,Email Subject,Click Time,Campaign Start,Time To Click', end='')
+    print(
+        "Masked ID,Week,Complexity,Email Subject,Click Time,Campaign Start,Time To Click",
+        end="",
+    )
     for i in range(max_labels):
-        print(',label_{}'.format(i+1), end='')
+        print(",label_{}".format(i + 1), end="")
     print()
     for click in clicks:
         current_campaign = campaigns[click.campaign._id]
-        time_to_click = click.time - current_campaign['start_time']
-        print('{},{},{},"{}",{},{},"{}"'.format(click.user._id, current_campaign['week'], current_campaign['complexity'], current_campaign['subject'], click.time.strftime('%Y-%m-%d %H:%M'), current_campaign['start_time'].strftime('%Y-%m-%d %H:%M'), time_to_click), end='')
+        time_to_click = click.time - current_campaign["start_time"]
+        print(
+            '{},{},{},"{}",{},{},"{}"'.format(
+                click.user._id,
+                current_campaign["week"],
+                current_campaign["complexity"],
+                current_campaign["subject"],
+                click.time.strftime("%Y-%m-%d %H:%M"),
+                current_campaign["start_time"].strftime("%Y-%m-%d %H:%M"),
+                time_to_click,
+            ),
+            end="",
+        )
         for i in range(max_labels):
             try:
-                print(',{}'.format(click.user.customer_defined_labels.get(assessment_id, [])[i]), end='')
-            except IndexError:      # Handle users that have fewer than max_labels
-                print(',', end='')
+                print(
+                    ",{}".format(
+                        click.user.customer_defined_labels.get(assessment_id, [])[i]
+                    ),
+                    end="",
+                )
+            except IndexError:  # Handle users that have fewer than max_labels
+                print(",", end="")
         print()
     return True
+
 
 def output_assessment_click_percentage_over_time(assessmentDoc):
     # Output the percentage of users that clicked (out of total number of users that clicked in each campaign) over time
     assessment_id = assessmentDoc._id
 
-    assessment_summary_clicks_thru_intervals = defaultdict(lambda:0)  # Sum up unique_user_clicks_thru_interval for entire assessment
-    assessment_summary_clicks_after_three_days = defaultdict(lambda:0) # Sum of unique_user_clicks after three days for various intervals
-    assessment_sum_of_unique_user_clicks = 0    # Sum of each campaign's unique_user_clicks (different from unique user clicks across entire assessment)
+    assessment_summary_clicks_thru_intervals = defaultdict(
+        lambda: 0
+    )  # Sum up unique_user_clicks_thru_interval for entire assessment
+    assessment_summary_clicks_after_three_days = defaultdict(
+        lambda: 0
+    )  # Sum of unique_user_clicks after three days for various intervals
+    assessment_sum_of_unique_user_clicks = 0  # Sum of each campaign's unique_user_clicks (different from unique user clicks across entire assessment)
 
     week = 1
-    for campaign in CampaignDoc.objects.raw({'assessment':assessment_id}).order_by([('start_time', pymongo.ASCENDING)]):
-        print('# Week {} user click percentage over time'.format(week))
-        print('# Campaign: {}   Assessment: {}'.format(campaign._id, assessment_id))
-        print('# Complexity: {}   Email Subject: {}'.format(campaign.template.complexity, campaign.subject))
-        print('# Campaign Start: {}'.format(campaign.start_time.strftime('%Y-%m-%d %H:%M')))
-        print('# Campaign End:   {}'.format(campaign.end_time.strftime('%Y-%m-%d %H:%M')))
+    for campaign in CampaignDoc.objects.raw({"assessment": assessment_id}).order_by(
+        [("start_time", pymongo.ASCENDING)]
+    ):
+        print("# Week {} user click percentage over time".format(week))
+        print("# Campaign: {}   Assessment: {}".format(campaign._id, assessment_id))
+        print(
+            "# Complexity: {}   Email Subject: {}".format(
+                campaign.template.complexity, campaign.subject
+            )
+        )
+        print(
+            "# Campaign Start: {}".format(
+                campaign.start_time.strftime("%Y-%m-%d %H:%M")
+            )
+        )
+        print(
+            "# Campaign End:   {}".format(campaign.end_time.strftime("%Y-%m-%d %H:%M"))
+        )
 
-        unique_user_clicks = len(list(ClickDoc.objects.raw({'campaign':campaign._id, 'user':{'$ne':None}}).aggregate({'$group':{'_id':'$user'}})))
+        unique_user_clicks = len(
+            list(
+                ClickDoc.objects.raw(
+                    {"campaign": campaign._id, "user": {"$ne": None}}
+                ).aggregate({"$group": {"_id": "$user"}})
+            )
+        )
         assessment_sum_of_unique_user_clicks += unique_user_clicks
 
         if unique_user_clicks:
-            print('Time Since Campaign Start,Unique Users Clicked So Far,Unique Users Clicked During Entire Campaign,Percentage of Unique Users To Click in Campaign So Far')
-            for (interval_str, interval_timedelta) in [('1 minute', timedelta(minutes = 1)),  ('3 minutes', timedelta(minutes = 3)), ('5 minutes', timedelta(minutes = 5)), ('15 minutes', timedelta(minutes = 15)), ('30 minutes', timedelta(minutes = 30)), ('60 minutes', timedelta(minutes = 60)), ('2 hours', timedelta(hours = 2)), ('3 hours', timedelta(hours = 3)), ('4 hours', timedelta(hours = 4)), ('1 day', timedelta(days = 1)), ('2 days', timedelta(days = 2)), ('3 days', timedelta(days = 3))]:
-                unique_user_clicks_thru_interval = len(list(ClickDoc.objects.raw({'campaign':campaign._id, 'user':{'$ne':None}, 'time':{'$lt':campaign.start_time + interval_timedelta}}).aggregate({'$group':{'_id':'$user'}})))
-                print('{},{},{},{:.1%}'.format(interval_str, unique_user_clicks_thru_interval, unique_user_clicks, unique_user_clicks_thru_interval/float(unique_user_clicks)))
+            print(
+                "Time Since Campaign Start,Unique Users Clicked So Far,Unique Users Clicked During Entire Campaign,Percentage of Unique Users To Click in Campaign So Far"
+            )
+            for (interval_str, interval_timedelta) in [
+                ("1 minute", timedelta(minutes=1)),
+                ("3 minutes", timedelta(minutes=3)),
+                ("5 minutes", timedelta(minutes=5)),
+                ("15 minutes", timedelta(minutes=15)),
+                ("30 minutes", timedelta(minutes=30)),
+                ("60 minutes", timedelta(minutes=60)),
+                ("2 hours", timedelta(hours=2)),
+                ("3 hours", timedelta(hours=3)),
+                ("4 hours", timedelta(hours=4)),
+                ("1 day", timedelta(days=1)),
+                ("2 days", timedelta(days=2)),
+                ("3 days", timedelta(days=3)),
+            ]:
+                unique_user_clicks_thru_interval = len(
+                    list(
+                        ClickDoc.objects.raw(
+                            {
+                                "campaign": campaign._id,
+                                "user": {"$ne": None},
+                                "time": {
+                                    "$lt": campaign.start_time + interval_timedelta
+                                },
+                            }
+                        ).aggregate({"$group": {"_id": "$user"}})
+                    )
+                )
+                print(
+                    "{},{},{},{:.1%}".format(
+                        interval_str,
+                        unique_user_clicks_thru_interval,
+                        unique_user_clicks,
+                        unique_user_clicks_thru_interval / float(unique_user_clicks),
+                    )
+                )
                 # Accumulate summary click stats
-                assessment_summary_clicks_thru_intervals[interval_str] += unique_user_clicks_thru_interval
+                assessment_summary_clicks_thru_intervals[
+                    interval_str
+                ] += unique_user_clicks_thru_interval
 
             # If we haven't found all of the unique users in the first 3 days, check each day after until we do
             if unique_user_clicks_thru_interval < unique_user_clicks:
@@ -352,32 +655,91 @@ def output_assessment_click_percentage_over_time(assessmentDoc):
                 num_days = 3
                 while unique_user_clicks_thru_interval < unique_user_clicks:
                     num_days += 1
-                    unique_user_clicks_thru_interval = len(list(ClickDoc.objects.raw({'campaign':campaign._id, 'user':{'$ne':None}, 'time':{'$lt':campaign.start_time + timedelta(days = num_days)}}).aggregate({'$group':{'_id':'$user'}})))
-                print('{} days,{},{},{:.1%}'.format(num_days, unique_user_clicks_thru_interval, unique_user_clicks, unique_user_clicks_thru_interval/float(unique_user_clicks)))
+                    unique_user_clicks_thru_interval = len(
+                        list(
+                            ClickDoc.objects.raw(
+                                {
+                                    "campaign": campaign._id,
+                                    "user": {"$ne": None},
+                                    "time": {
+                                        "$lt": campaign.start_time
+                                        + timedelta(days=num_days)
+                                    },
+                                }
+                            ).aggregate({"$group": {"_id": "$user"}})
+                        )
+                    )
+                print(
+                    "{} days,{},{},{:.1%}".format(
+                        num_days,
+                        unique_user_clicks_thru_interval,
+                        unique_user_clicks,
+                        unique_user_clicks_thru_interval / float(unique_user_clicks),
+                    )
+                )
                 # Accumulate summary click stats, but only store the number of users that clicked after three days
-                assessment_summary_clicks_after_three_days[num_days] += (unique_user_clicks - unique_user_clicks_thru_three_days)
+                assessment_summary_clicks_after_three_days[num_days] += (
+                    unique_user_clicks - unique_user_clicks_thru_three_days
+                )
         else:
-            print('No users clicked during campaign')
+            print("No users clicked during campaign")
 
         print()
         week += 1
 
     # Output summary totals:
-    print('# Assessment {} sum of user click percentage over time'.format(assessment_id))
-    print('Time Since Campaign Start,Unique Users Clicked So Far,Sum of Unique Users Clicked During Each Campaign,Percentage of Unique Users To Click So Far')
+    print(
+        "# Assessment {} sum of user click percentage over time".format(assessment_id)
+    )
+    print(
+        "Time Since Campaign Start,Unique Users Clicked So Far,Sum of Unique Users Clicked During Each Campaign,Percentage of Unique Users To Click So Far"
+    )
     if assessment_sum_of_unique_user_clicks:
         # Output stats for standard intervals first
-        for interval_str in ['1 minute', '3 minutes', '5 minutes', '15 minutes', '30 minutes', '60 minutes', '2 hours', '3 hours', '4 hours', '1 day', '2 days', '3 days']:
-            unique_user_clicks_thru_interval = assessment_summary_clicks_thru_intervals[interval_str]
-            print('{},{},{},{:.1%}'.format(interval_str, unique_user_clicks_thru_interval, assessment_sum_of_unique_user_clicks, unique_user_clicks_thru_interval/float(assessment_sum_of_unique_user_clicks)))
+        for interval_str in [
+            "1 minute",
+            "3 minutes",
+            "5 minutes",
+            "15 minutes",
+            "30 minutes",
+            "60 minutes",
+            "2 hours",
+            "3 hours",
+            "4 hours",
+            "1 day",
+            "2 days",
+            "3 days",
+        ]:
+            unique_user_clicks_thru_interval = assessment_summary_clicks_thru_intervals[
+                interval_str
+            ]
+            print(
+                "{},{},{},{:.1%}".format(
+                    interval_str,
+                    unique_user_clicks_thru_interval,
+                    assessment_sum_of_unique_user_clicks,
+                    unique_user_clicks_thru_interval
+                    / float(assessment_sum_of_unique_user_clicks),
+                )
+            )
 
         # Output stats from any extra intervals (greater than 3 days)
-        total_clicks_so_far = assessment_summary_clicks_thru_intervals['3 days']
-        for num_days, unique_user_clicks_thru_day in sorted(assessment_summary_clicks_after_three_days.items()):
+        total_clicks_so_far = assessment_summary_clicks_thru_intervals["3 days"]
+        for num_days, unique_user_clicks_thru_day in sorted(
+            assessment_summary_clicks_after_three_days.items()
+        ):
             total_clicks_so_far += unique_user_clicks_thru_day
-            print('{} days,{},{},{:.1%}'.format(num_days, total_clicks_so_far, assessment_sum_of_unique_user_clicks, total_clicks_so_far/float(assessment_sum_of_unique_user_clicks)))
+            print(
+                "{} days,{},{},{:.1%}".format(
+                    num_days,
+                    total_clicks_so_far,
+                    assessment_sum_of_unique_user_clicks,
+                    total_clicks_so_far / float(assessment_sum_of_unique_user_clicks),
+                )
+            )
     else:
-        print('No users clicked during assessment')
+        print("No users clicked during assessment")
+
 
 def output_assessment_click_rates_by_indicators(assessmentDoc):
     # Output each complexity indicator and the click rate for emails used a template containing that indicator
@@ -386,74 +748,132 @@ def output_assessment_click_rates_by_indicators(assessmentDoc):
     # Build dict of campaigns and emails_sent,unique_click counts
     campaign_emails_clicks = dict()
 
-    sent_emails_qs = EmailDoc.objects.raw({'assessment':assessment_id}).aggregate({'$group':{'_id':{'campaign':'$campaign'},
-                                                                            'sent_email_count':{'$sum':1}}})
+    sent_emails_qs = EmailDoc.objects.raw({"assessment": assessment_id}).aggregate(
+        {"$group": {"_id": {"campaign": "$campaign"}, "sent_email_count": {"$sum": 1}}}
+    )
     for result in sent_emails_qs:
-        campaign_emails_clicks[result['_id']['campaign']] = {'emails_sent':result['sent_email_count']}
+        campaign_emails_clicks[result["_id"]["campaign"]] = {
+            "emails_sent": result["sent_email_count"]
+        }
 
-    unique_user_clicks_qs = ClickDoc.objects.raw({'assessment':assessment_id, 'campaign':{'$ne':None}, 'user':{'$ne':None}}).aggregate({'$group':{'_id':{'campaign':'$campaign', 'user':'$user'}}},
-                                        {'$group':{'_id':{'campaign':'$_id.campaign'},
-                                                   'unique_user_click_count':{'$sum':1}}})
+    unique_user_clicks_qs = ClickDoc.objects.raw(
+        {"assessment": assessment_id, "campaign": {"$ne": None}, "user": {"$ne": None}}
+    ).aggregate(
+        {"$group": {"_id": {"campaign": "$campaign", "user": "$user"}}},
+        {
+            "$group": {
+                "_id": {"campaign": "$_id.campaign"},
+                "unique_user_click_count": {"$sum": 1},
+            }
+        },
+    )
     for result in unique_user_clicks_qs:
-        campaign_emails_clicks[result['_id']['campaign']]['unique_user_clicks'] = result['unique_user_click_count']
+        campaign_emails_clicks[result["_id"]["campaign"]][
+            "unique_user_clicks"
+        ] = result["unique_user_click_count"]
 
     # for each indicator item in the campaign's template, accumulate sent_emails and unique_clicks
     click_rates = dict()
     for indicator_category in INDICATOR_LOOKUP.keys():
-        click_rates[indicator_category] = defaultdict(lambda:defaultdict(lambda:defaultdict(lambda:0)))
+        click_rates[indicator_category] = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(lambda: 0))
+        )
 
-    for campaign in CampaignDoc.objects.raw({'assessment':assessment_id}).order_by([('start_time', pymongo.ASCENDING)]):
-        current_campaign_emails_sent = campaign_emails_clicks[campaign._id].get('emails_sent', 0)
-        current_campaign_unique_clicks = campaign_emails_clicks[campaign._id].get('unique_user_clicks', 0)
+    for campaign in CampaignDoc.objects.raw({"assessment": assessment_id}).order_by(
+        [("start_time", pymongo.ASCENDING)]
+    ):
+        current_campaign_emails_sent = campaign_emails_clicks[campaign._id].get(
+            "emails_sent", 0
+        )
+        current_campaign_unique_clicks = campaign_emails_clicks[campaign._id].get(
+            "unique_user_clicks", 0
+        )
         for category in click_rates.keys():
-            for indicator_name,indicator_value in getattr(campaign.template, category).items():
-                # Adjust to prevent double count of Sender External/Internal
-                if indicator_name == "external" and indicator_value == 0 and campaign.template.sender["internal"] != 0:
-                       continue # Continue as this will be counted under internal.
+            for indicator_name, indicator_value in getattr(
+                campaign.template, category
+            ).items():
+                # prevent double counting of sender metrics
+                if (
+                    # these cases will be counted under sender/internal
+                    category == "sender"
+                    and indicator_name == "external"
+                    and indicator_value == 0
+                    and campaign.template.sender["internal"] != 0
+                ) or (
+                    # these cases will be counted under sender/external
+                    category == "sender"
+                    and indicator_name == "internal"
+                    and indicator_value == 0
+                    and campaign.template.sender["external"] != 0
+                ):
+                    continue
                 else:
-                    click_rates[category][indicator_name][indicator_value]['emails_sent'] += current_campaign_emails_sent
-                    click_rates[category][indicator_name][indicator_value]['unique_clicks'] += current_campaign_unique_clicks
+                    click_rates[category][indicator_name][indicator_value][
+                        "emails_sent"
+                    ] += current_campaign_emails_sent
+                    click_rates[category][indicator_name][indicator_value][
+                        "unique_clicks"
+                    ] += current_campaign_unique_clicks
 
     # output the CSV
-    print('category,indicator,emails_sent,unique_clicks,click_rate')
+    print("category,indicator,emails_sent,unique_clicks,click_rate")
     for category in click_rates.keys():
         for indicator_name in click_rates[category].keys():
             for indicator_score in click_rates[category][indicator_name]:
-                emails_sent = click_rates[category][indicator_name][indicator_score]['emails_sent']
-                unique_clicks = click_rates[category][indicator_name][indicator_score]['unique_clicks']
+                emails_sent = click_rates[category][indicator_name][indicator_score][
+                    "emails_sent"
+                ]
+                unique_clicks = click_rates[category][indicator_name][indicator_score][
+                    "unique_clicks"
+                ]
                 click_rate_pct = unique_clicks / float(emails_sent)
-                print('{},{},{},{},{:.1%}'.format(category.capitalize(), INDICATOR_LOOKUP[category][indicator_name][indicator_score], emails_sent, unique_clicks, click_rate_pct))
+                print(
+                    "{},{},{},{},{:.1%}".format(
+                        category.capitalize(),
+                        INDICATOR_LOOKUP[category][indicator_name][indicator_score],
+                        emails_sent,
+                        unique_clicks,
+                        click_rate_pct,
+                    )
+                )
 
 
 def main():
-    args = docopt(__doc__, version='v0.0.1')
-    connect_from_config(args['--section'])
+    args = docopt(__doc__, version="v0.0.1")
+    connect_from_config(args["--section"])
     # import IPython; IPython.embed() #<<< BREAKPOINT >>>
     # sys.exit(0)
 
     try:
-        assessmentDoc = AssessmentDoc.objects.raw({'_id': args['ASSESSMENT_ID']}).first()
+        assessmentDoc = AssessmentDoc.objects.raw(
+            {"_id": args["ASSESSMENT_ID"]}
+        ).first()
     except DoesNotExist:
         assessmentDoc = None
-        print('Cannot generate report, assessment does not exist: {}'.format(args['ASSESSMENT_ID']))
+        print(
+            "Cannot generate report, assessment does not exist: {}".format(
+                args["ASSESSMENT_ID"]
+            )
+        )
         success = False
 
     if assessmentDoc:
-        if args['--clicks']:
+        if args["--clicks"]:
             success = output_assessment_click_report(assessmentDoc)
-        elif args['--applications']:
+        elif args["--applications"]:
             success = output_assessment_application_report(assessmentDoc)
-        elif args['--summary']:
+        elif args["--summary"]:
             success = output_assessment_summary_report(assessmentDoc)
-        elif args['--raw-clicks']:
+        elif args["--raw-clicks"]:
             success = output_assessment_raw_clicks_report(assessmentDoc)
-        elif args['--time-to-clicks']:
+        elif args["--time-to-clicks"]:
             success = output_assessment_click_percentage_over_time(assessmentDoc)
-        elif args['--complexity']:
+        elif args["--complexity"]:
             success = output_assessment_click_rates_by_indicators(assessmentDoc)
 
     if not success:
         sys.exit(-1)
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     main()
