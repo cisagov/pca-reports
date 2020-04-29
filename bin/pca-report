@@ -799,12 +799,6 @@ def output_assessment_click_rates_by_indicators(assessmentDoc):
                     and indicator_name == "external"
                     and indicator_value == 0
                     and campaign.template.sender["internal"] != 0
-                ) or (
-                    # these cases will be counted under sender/external
-                    category == "sender"
-                    and indicator_name == "internal"
-                    and indicator_value == 0
-                    and campaign.template.sender["external"] != 0
                 ):
                     continue
                 else:
