@@ -792,12 +792,22 @@ def output_assessment_click_rates_by_indicators(assessmentDoc):
             for indicator_name, indicator_value in getattr(
                 campaign.template, category
             ).items():
-                click_rates[category][indicator_name][indicator_value][
-                    "emails_sent"
-                ] += current_campaign_emails_sent
-                click_rates[category][indicator_name][indicator_value][
-                    "unique_clicks"
-                ] += current_campaign_unique_clicks
+                # prevent double counting of sender metrics
+                if (
+                    # these cases will be counted under sender/internal
+                    category == "sender"
+                    and indicator_name == "external"
+                    and indicator_value == 0
+                    and campaign.template.sender["internal"] != 0
+                ):
+                    continue
+                else:
+                    click_rates[category][indicator_name][indicator_value][
+                        "emails_sent"
+                    ] += current_campaign_emails_sent
+                    click_rates[category][indicator_name][indicator_value][
+                        "unique_clicks"
+                    ] += current_campaign_unique_clicks
 
     # output the CSV
     print("category,indicator,emails_sent,unique_clicks,click_rate")
