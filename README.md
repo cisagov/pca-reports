@@ -1,4 +1,4 @@
-# NCATS: PCA Reports
+# PCA Reports
 
 The files needed reporting on Phishing Campaign Assessment (PCA) data.
 
@@ -24,7 +24,7 @@ The PCA commands implemented in the docker container can be aliased into the hos
 
 Alias the container commands to the local environment:
 ```bash
-eval "$(docker run ncats/pca-reports)"
+eval "$(docker run cisagov/pca-reports)"
 ```
 
 To run a PCA command:
@@ -45,19 +45,19 @@ Whenever an aliased PCA command is executed, it will use the current working dir
 
 ### Advanced Configuration
 
-By default, the container will look for your PCA configuration in `/etc/pca`.  This location can be changed by setting the `PCA_CONF_DIR` environment variable to point to your PCA configuration directory.  The commands will also attempt to run using the `ncats/pca-reports` image.  A different image can be used by setting the `PCA_REPORTS_IMAGE` environment variable to the image name.
+By default, the container will look for your PCA configuration in `/etc/pca`.  This location can be changed by setting the `PCA_CONF_DIR` environment variable to point to your PCA configuration directory.  The commands will also attempt to run using the `cisagov/pca-reports` image.  A different image can be used by setting the `PCA_REPORTS_IMAGE` environment variable to the image name.
 
 Example:
 ```
 export PCA_CONF_DIR=/private/etc/pca
-export PCA_REPORTS_IMAGE=dhub.ncats.cyber.dhs.gov:5001/pca-reports
+export PCA_REPORTS_IMAGE=cisagov/pca-reports
 ```
 
 ### Building the pca-reports container
 To build the Docker container for pca-reports:
 
 ```bash
-docker build -t ncats/pca-reports .
+docker build -t cisagov/pca-reports .
 ```
 
 ## Manual Installation
