@@ -1,4 +1,4 @@
-FROM ncats/pca-core
+FROM cisagov/pca-core
 MAINTAINER Dave Redmin <david.redmin@trio.dhs.gov>
 ENV PCA_REPORTS_SRC="/usr/src/pca-reports"
 
@@ -12,7 +12,7 @@ RUN apt-get update && apt-get -y install \
     texlive-latex-extra
 
 # Install our own fonts
-COPY pca_report/assets/Fonts /usr/share/fonts/truetype/ncats
+COPY pca_report/assets/Fonts /usr/share/fonts/truetype/cisagov
 RUN fc-cache -fsv
 
 WORKDIR ${PCA_REPORTS_SRC}
